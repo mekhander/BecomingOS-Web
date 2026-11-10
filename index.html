@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#12372a">
+  <meta name="description" content="기록하고, 돌아보고, 다음을 정하는 개인 데이터 앱">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <title>BecomingOS</title>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">BECOMING OS</p>
+      <h1>오늘을 모으고<br>다음을 만드세요.</h1>
+    </div>
+    <button id="settingsButton" class="icon-button" aria-label="설정">⚙</button>
+  </header>
+
+  <main>
+    <section id="captureView" class="view active" aria-labelledby="captureHeading">
+      <div class="status-card">
+        <span id="networkDot" class="dot"></span>
+        <div><strong id="networkText">상태 확인 중</strong><small id="syncText">기기에 먼저 저장됩니다</small></div>
+        <button id="syncNowButton" class="text-button">동기화</button>
+      </div>
+
+      <h2 id="captureHeading">빠른 기록</h2>
+      <form id="noteForm" class="note-card">
+        <label for="noteText">지금 남기고 싶은 것은?</label>
+        <textarea id="noteText" maxlength="10000" placeholder="생각, 관찰, 할 일…" required></textarea>
+        <div class="form-row">
+          <input id="noteTags" maxlength="120" placeholder="태그 (쉼표로 구분)" aria-label="태그">
+          <button class="primary" type="submit">메모 저장</button>
+        </div>
+      </form>
+
+      <div class="capture-grid">
+        <label class="capture-button photo">
+          <span>📷</span><strong>사진</strong><small>카메라 또는 앨범</small>
+          <input id="photoInput" type="file" accept="image/*" capture="environment" multiple hidden>
+        </label>
+        <label class="capture-button file">
+          <span>📎</span><strong>파일</strong><small>문서와 자료</small>
+          <input id="fileInput" type="file" multiple hidden>
+        </label>
+        <button id="recordButton" class="capture-button audio" type="button">
+          <span>🎙️</span><strong>녹음</strong><small id="recordHint">눌러서 시작</small>
+        </button>
+        <button id="quickReviewButton" class="capture-button review" type="button">
+          <span>✦</span><strong>회고</strong><small>오늘 돌아보기</small>
+        </button>
+      </div>
+      <p id="captureMessage" class="message" role="status"></p>
+    </section>
+
+    <section id="timelineView" class="view" aria-labelledby="timelineHeading">
+      <div class="section-heading"><div><p class="eyebrow">REVIEW</p><h2 id="timelineHeading">기록 타임라인</h2></div><span id="entryCount" class="count">0</span></div>
+      <div class="filters">
+        <input id="searchInput" type="search" placeholder="기록 검색">
+        <select id="typeFilter" aria-label="기록 종류">
+          <option value="">전체</option><option value="note">메모</option><option value="photo">사진</option><option value="audio">녹음</option><option value="file">파일</option><option value="review">회고</option>
+        </select>
+      </div>
+      <div id="timeline" class="timeline"></div>
+      <div id="emptyTimeline" class="empty"><span>◌</span><p>아직 기록이 없습니다.<br>첫 기록을 남겨보세요.</p></div>
+    </section>
+
+    <section id="planView" class="view" aria-labelledby="planHeading">
+      <p class="eyebrow">PLAN</p><h2 id="planHeading">다음 행동</h2>
+      <form id="planForm" class="plan-form">
+        <input id="planText" maxlength="300" placeholder="다음에 할 일" required>
+        <input id="planDate" type="date" aria-label="예정일">
+        <button class="primary" type="submit">추가</button>
+      </form>
+      <div id="planList" class="plan-list"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="주요 메뉴">
+    <button data-view="captureView" class="active"><span>＋</span>수집</button>
+    <button data-view="timelineView"><span>▤</span>리뷰</button>
+    <button data-view="planView"><span>✓</span>계획</button>
+  </nav>
+
+  <dialog id="reviewDialog">
+    <form id="reviewForm" method="dialog">
+      <button class="dialog-close" value="cancel" aria-label="닫기">×</button>
+      <p class="eyebrow">DAILY REVIEW</p><h2>오늘은 어땠나요?</h2>
+      <textarea id="reviewText" maxlength="5000" placeholder="기억하고 싶은 일, 배운 점, 내일 바꿀 것…" required></textarea>
+      <button class="primary wide" value="default">회고 저장</button>
+    </form>
+  </dialog>
+
+  <dialog id="settingsDialog">
+    <form id="settingsForm" method="dialog">
+      <button class="dialog-close" value="cancel" aria-label="닫기">×</button>
+      <p class="eyebrow">SETTINGS</p><h2>보관과 동기화</h2>
+      <label>Google OAuth Client ID<input id="clientIdInput" autocomplete="off" placeholder="...apps.googleusercontent.com"></label>
+      <p class="help">Google Cloud에서 만든 웹 앱 Client ID가 필요합니다. Drive에는 BecomingOS 전용 폴더만 생성하고 접근합니다.</p>
+      <label class="check-row"><input id="cleanupEnabled" type="checkbox" checked> Drive 업로드 확인 후 30일 지난 기기 원본 자동 정리</label>
+      <p class="help">Google Drive 원본은 1년간 보관한 뒤 다음 동기화 때 삭제합니다. 기록 ID와 보관 시각은 기기에 남습니다.</p>
+      <button class="primary wide" value="default">설정 저장</button>
+    </form>
+  </dialog>
+
+  <template id="entryTemplate"><article class="entry-card"><div class="entry-icon"></div><div class="entry-body"><div class="entry-meta"></div><h3></h3><p></p><div class="entry-tags"></div></div><span class="sync-badge"></span></article></template>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
