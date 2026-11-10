@@ -12,11 +12,19 @@ function now() { return new Date().toISOString(); }
 function message(text, error = false) { const el=$('#captureMessage'); el.textContent=text; el.style.color=error?'#a43f38':''; }
 function entryBase(type, fields = {}) { const createdAt=now(); return { id:id(), type, title:typeInfo[type][0], text:'', tags:[], createdAt, capturedAt:createdAt, syncState:'pending', processingState:'unprocessed', ...fields }; }
 
+async function sha256Hex(blob) {
+  const buffer = await blob.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 async function addFiles(files, type) {
   let saved = 0;
   for (const file of files) {
     if (file.size > MAX_FILE_SIZE) { message(`${file.name}: 100MB를 넘어서 저장하지 않았습니다.`, true); continue; }
-    await saveEntry(entryBase(type, { title:file.name, fileName:file.name, mimeType:file.type || 'application/octet-stream', size:file.size, blob:file }));
+    const checksum = await sha256Hex(file);
+    await saveEntry(entryBase(type, { title:file.name, fileName:file.name, mimeType:file.type || 'application/octet-stream', size:file.size, blob:file, checksumAlgorithm:'SHA-256', checksum }));
     saved += 1;
   }
   if (saved) message(`${saved}개를 이 기기에 저장했습니다.`);
@@ -46,7 +54,7 @@ function updateNetwork() { const online=navigator.onLine; $('#networkDot').class
 $('#noteForm').addEventListener('submit',async event=>{event.preventDefault();const text=$('#noteText').value.trim();if(!text)return;await saveEntry(entryBase('note',{title:text.slice(0,42),text,tags:$('#noteTags').value.split(',').map(t=>t.trim()).filter(Boolean)}));event.target.reset();message('메모를 이 기기에 저장했습니다.');await renderTimeline();});
 $('#photoInput').addEventListener('change',e=>addFiles(e.target.files,'photo'));
 $('#fileInput').addEventListener('change',e=>addFiles(e.target.files,'file'));
-$('#recordButton').addEventListener('click',async()=>{if(mediaRecorder?.state==='recording'){mediaRecorder.stop();return;}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});audioChunks=[];mediaRecorder=new MediaRecorder(stream);mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{const blob=new Blob(audioChunks,{type:mediaRecorder.mimeType});stream.getTracks().forEach(t=>t.stop());await saveEntry(entryBase('audio',{title:`녹음 ${new Date().toLocaleString('ko-KR')}`,fileName:`recording-${Date.now()}.webm`,mimeType:blob.type,size:blob.size,blob}));$('#recordHint').textContent='눌러서 시작';message('녹음을 이 기기에 저장했습니다.');await renderTimeline();};mediaRecorder.start();$('#recordHint').textContent='녹음 중 · 눌러서 정지';message('녹음 중입니다…');}catch(error){message(location.protocol==='https:'||location.hostname==='localhost'?'마이크 권한을 허용해 주세요.':'녹음은 HTTPS 주소에서 사용할 수 있습니다.',true);}});
+$('#recordButton').addEventListener('click',async()=>{if(mediaRecorder?.state==='recording'){mediaRecorder.stop();return;}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});audioChunks=[];mediaRecorder=new MediaRecorder(stream);mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{const blob=new Blob(audioChunks,{type:mediaRecorder.mimeType});stream.getTracks().forEach(t=>t.stop());const checksum=await sha256Hex(blob);await saveEntry(entryBase('audio',{title:`녹음 ${new Date().toLocaleString('ko-KR')}`,fileName:`recording-${Date.now()}.webm`,mimeType:blob.type,size:blob.size,blob,checksumAlgorithm:'SHA-256',checksum}));$('#recordHint').textContent='눌러서 시작';message('녹음을 이 기기에 저장했습니다.');await renderTimeline();};mediaRecorder.start();$('#recordHint').textContent='녹음 중 · 눌러서 정지';message('녹음 중입니다…');}catch(error){message(location.protocol==='https:'||location.hostname==='localhost'?'마이크 권한을 허용해 주세요.':'녹음은 HTTPS 주소에서 사용할 수 있습니다.',true);}});
 $('#quickReviewButton').addEventListener('click',()=>$('#reviewDialog').showModal());
 $('#reviewForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();const text=$('#reviewText').value.trim();if(!text)return;await saveEntry(entryBase('review',{title:`${new Date().toLocaleDateString('ko-KR')} 회고`,text}));event.target.reset();$('#reviewDialog').close();message('오늘의 회고를 저장했습니다.');await renderTimeline();});
 $('#planForm').addEventListener('submit',async event=>{event.preventDefault();await savePlan({id:id(),text:$('#planText').value.trim(),dueDate:$('#planDate').value,done:false,createdAt:now()});event.target.reset();await renderPlans();});
