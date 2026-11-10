@@ -1,5 +1,5 @@
 const DB_NAME = 'becoming-os';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 function request(request) {
   return new Promise((resolve, reject) => {
@@ -13,13 +13,21 @@ export async function openDatabase() {
     const opening = indexedDB.open(DB_NAME, DB_VERSION);
     opening.onupgradeneeded = () => {
       const db = opening.result;
-      const entries = db.createObjectStore('entries', { keyPath: 'id' });
-      entries.createIndex('createdAt', 'createdAt');
-      entries.createIndex('type', 'type');
-      entries.createIndex('syncState', 'syncState');
-      const plans = db.createObjectStore('plans', { keyPath: 'id' });
-      plans.createIndex('createdAt', 'createdAt');
-      db.createObjectStore('settings', { keyPath: 'key' });
+      let entries;
+      if (!db.objectStoreNames.contains('entries')) {
+        entries = db.createObjectStore('entries', { keyPath: 'id' });
+      } else {
+        entries = opening.transaction.objectStore('entries');
+      }
+      if (!entries.indexNames.contains('createdAt')) entries.createIndex('createdAt', 'createdAt');
+      if (!entries.indexNames.contains('type')) entries.createIndex('type', 'type');
+      if (!entries.indexNames.contains('syncState')) entries.createIndex('syncState', 'syncState');
+      if (!entries.indexNames.contains('processingState')) entries.createIndex('processingState', 'processingState');
+      if (!db.objectStoreNames.contains('plans')) {
+        const plans = db.createObjectStore('plans', { keyPath: 'id' });
+        plans.createIndex('createdAt', 'createdAt');
+      }
+      if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
     };
     opening.onsuccess = () => resolve(opening.result);
     opening.onerror = () => reject(opening.error);
@@ -31,9 +39,14 @@ async function store(name, mode = 'readonly') {
   return db.transaction(name, mode).objectStore(name);
 }
 
-export async function saveEntry(entry) { return request((await store('entries', 'readwrite')).put(entry)); }
-export async function getEntry(id) { return request((await store('entries')).get(id)); }
-export async function listEntries() { return (await request((await store('entries')).getAll())).sort((a,b) => b.createdAt.localeCompare(a.createdAt)); }
+function normalizeEntry(entry) {
+  if (entry === null || entry === undefined) return entry;
+  return { syncState: 'pending', processingState: 'unprocessed', ...entry };
+}
+
+export async function saveEntry(entry) { return request((await store('entries', 'readwrite')).put(normalizeEntry(entry))); }
+export async function getEntry(id) { return normalizeEntry(await request((await store('entries')).get(id))); }
+export async function listEntries() { return (await request((await store('entries')).getAll())).map(normalizeEntry).sort((a,b) => b.createdAt.localeCompare(a.createdAt)); }
 export async function savePlan(plan) { return request((await store('plans', 'readwrite')).put(plan)); }
 export async function listPlans() { return (await request((await store('plans')).getAll())).sort((a,b) => a.done-b.done || a.createdAt.localeCompare(b.createdAt)); }
 export async function saveSetting(key, value) { return request((await store('settings','readwrite')).put({key,value})); }

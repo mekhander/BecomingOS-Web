@@ -1,4 +1,4 @@
-import { cleanupSyncedEntries, getSetting, listEntries, listPlans, saveEntry, savePlan, saveSetting } from './db.js';
+import { cleanupSyncedEntries, getSetting, listEntries, listPlans, saveEntry, savePlan, saveSetting } from './db.js?v=3';
 import { syncPending } from './drive.js?v=2';
 
 const $ = selector => document.querySelector(selector);
@@ -10,7 +10,7 @@ let audioChunks = [];
 function id() { return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`; }
 function now() { return new Date().toISOString(); }
 function message(text, error = false) { const el=$('#captureMessage'); el.textContent=text; el.style.color=error?'#a43f38':''; }
-function entryBase(type, fields = {}) { const createdAt=now(); return { id:id(), type, title:typeInfo[type][0], text:'', tags:[], createdAt, capturedAt:createdAt, syncState:'pending', ...fields }; }
+function entryBase(type, fields = {}) { const createdAt=now(); return { id:id(), type, title:typeInfo[type][0], text:'', tags:[], createdAt, capturedAt:createdAt, syncState:'pending', processingState:'unprocessed', ...fields }; }
 
 async function addFiles(files, type) {
   let saved = 0;
