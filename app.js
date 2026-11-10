@@ -1,8 +1,5 @@
 import { cleanupSyncedEntries, getSetting, listEntries, listPlans, saveEntry, savePlan, saveSetting } from './db.js?v=4';
 import { syncPending } from './drive.js?v=2';
-import { requireAuthorizedUser } from './auth.js?v=1';
-
-await requireAuthorizedUser();
 
 const $ = selector => document.querySelector(selector);
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
