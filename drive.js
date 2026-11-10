@@ -1,4 +1,4 @@
-import { getSetting, listEntries, saveEntry } from './db.js?v=3';
+import { getSetting, listEntries, saveEntry } from './db.js?v=4';
 import { GOOGLE_CLIENT_ID } from './config.js?v=2';
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';

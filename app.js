@@ -1,4 +1,4 @@
-import { cleanupSyncedEntries, getSetting, listEntries, listPlans, saveEntry, savePlan, saveSetting } from './db.js?v=3';
+import { cleanupSyncedEntries, getSetting, listEntries, listPlans, saveEntry, savePlan, saveSetting } from './db.js?v=4';
 import { syncPending } from './drive.js?v=2';
 
 const $ = selector => document.querySelector(selector);

@@ -1,5 +1,4 @@
 const DB_NAME = 'becoming-os';
-const DB_VERSION = 2;
 
 function request(request) {
   return new Promise((resolve, reject) => {
@@ -10,7 +9,10 @@ function request(request) {
 
 export async function openDatabase() {
   return new Promise((resolve, reject) => {
-    const opening = indexedDB.open(DB_NAME, DB_VERSION);
+    // Open the installed schema as-is. Entry fields do not need an index, so
+    // adding processingState must not force an upgrade that can be blocked by
+    // another open BecomingOS tab (for example, while it is recording).
+    const opening = indexedDB.open(DB_NAME);
     opening.onupgradeneeded = () => {
       const db = opening.result;
       let entries;
@@ -22,7 +24,6 @@ export async function openDatabase() {
       if (!entries.indexNames.contains('createdAt')) entries.createIndex('createdAt', 'createdAt');
       if (!entries.indexNames.contains('type')) entries.createIndex('type', 'type');
       if (!entries.indexNames.contains('syncState')) entries.createIndex('syncState', 'syncState');
-      if (!entries.indexNames.contains('processingState')) entries.createIndex('processingState', 'processingState');
       if (!db.objectStoreNames.contains('plans')) {
         const plans = db.createObjectStore('plans', { keyPath: 'id' });
         plans.createIndex('createdAt', 'createdAt');
