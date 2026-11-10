@@ -1,0 +1,7 @@
+body.locked > :not(.auth-gate):not(script) { display: none !important; }
+.auth-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.auth-gate[hidden] { display: none; }
+.auth-card { width: min(100%, 430px); padding: 30px; border-radius: 24px; background: var(--card); box-shadow: var(--shadow); }
+.auth-card h1 { font-family: Georgia,"Noto Serif KR",serif; font-size: 2rem; line-height: 1.2; margin: 0 0 18px; }
+.auth-card > p:not(.eyebrow):not(.message) { color: var(--muted); line-height: 1.6; }
+.auth-card .message { text-align: center; margin-bottom: 0; }

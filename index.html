@@ -8,9 +8,19 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="auth.css">
   <title>BecomingOS</title>
 </head>
-<body>
+<body class="locked">
+  <section id="authGate" class="auth-gate" aria-labelledby="authHeading">
+    <div class="auth-card">
+      <p class="eyebrow">PRIVATE BECOMING OS</p>
+      <h1 id="authHeading">본인 계정으로<br>시작하세요.</h1>
+      <p>허용된 Google 계정으로 확인된 경우에만 이 기기의 기록을 열 수 있습니다.</p>
+      <button id="authButton" class="primary wide" type="button">Google 계정으로 로그인</button>
+      <p id="authMessage" class="message" role="status"></p>
+    </div>
+  </section>
   <header class="topbar">
     <div>
       <p class="eyebrow">BECOMING OS</p>
@@ -107,6 +117,6 @@
 
   <template id="entryTemplate"><article class="entry-card"><div class="entry-icon"></div><div class="entry-body"><div class="entry-meta"></div><h3></h3><p></p><div class="entry-tags"></div></div><span class="sync-badge"></span></article></template>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script type="module" src="app.js?v=4"></script>
+  <script type="module" src="app.js?v=5"></script>
 </body>
 </html>
