@@ -47,16 +47,43 @@ async function driveFetch(url, options = {}) {
 async function getFolderId() {
   const saved = await getSetting('driveFolderId');
   if (saved) return saved;
+  const { saveSetting } = await import('./db.js');
+  const q = "mimeType = 'application/vnd.google-apps.folder' and trashed = false and appProperties has { key='app' and value='BecomingOS' }";
+  const listUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent('files(id,name,createdTime)')}&orderBy=${encodeURIComponent('createdTime')}&pageSize=1`;
+  const existing = await driveFetch(listUrl);
+  if (existing?.files?.length) {
+    await saveSetting('driveFolderId', existing.files[0].id);
+    return existing.files[0].id;
+  }
   const metadata = { name: 'BecomingOS', mimeType: 'application/vnd.google-apps.folder', appProperties: { app: 'BecomingOS' } };
   const folder = await driveFetch('https://www.googleapis.com/drive/v3/files?fields=id,name', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(metadata) });
-  const { saveSetting } = await import('./db.js');
   await saveSetting('driveFolderId', folder.id);
   return folder.id;
 }
 
-async function uploadMultipart(name, mimeType, data, folderId) {
+async function findExistingFileId(entryId, kind) {
+  const q = `trashed = false and appProperties has { key='app' and value='BecomingOS' } and appProperties has { key='entryId' and value='${entryId}' } and appProperties has { key='kind' and value='${kind}' }`;
+  const listUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent('files(id,createdTime)')}&orderBy=${encodeURIComponent('createdTime')}&pageSize=1`;
+  const existing = await driveFetch(listUrl);
+  return existing?.files?.[0]?.id || null;
+}
+
+async function getOrCreateDriveFile({ existingId, entryId, kind, name, mimeType, data, folderId, checksum, checksumAlgorithm }) {
+  if (existingId) return existingId;
+  const foundId = await findExistingFileId(entryId, kind);
+  if (foundId) return foundId;
+  const appProperties = { app: 'BecomingOS', entryId: String(entryId), kind: String(kind) };
+  if (kind === 'attachment' && checksum) {
+    appProperties.checksumAlgorithm = String(checksumAlgorithm || 'SHA-256');
+    appProperties.checksum = String(checksum);
+  }
+  const uploaded = await uploadMultipart(name, mimeType, data, folderId, { appProperties });
+  return uploaded.id;
+}
+
+async function uploadMultipart(name, mimeType, data, folderId, extraMetadata = {}) {
   const boundary = `becoming_${crypto.randomUUID?.() || `${Date.now()}_${Math.random().toString(16).slice(2)}`}`;
-  const meta = JSON.stringify({ name, parents: [folderId], appProperties: { app: 'BecomingOS' } });
+  const meta = JSON.stringify({ name, parents: [folderId], ...extraMetadata, appProperties: { app: 'BecomingOS', ...(extraMetadata.appProperties || {}) } });
   const body = new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`, data, `\r\n--${boundary}--`]);
   return driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', { method:'POST', headers:{'Content-Type':`multipart/related; boundary=${boundary}`}, body });
 }
@@ -70,13 +97,11 @@ export async function syncPending() {
     try {
       const metadata = { ...entry, blob: undefined };
       if (!entry.driveMetadataFileId) {
-        const uploadedMetadata = await uploadMultipart(`${entry.id}.json`, 'application/json', JSON.stringify(metadata), folderId);
-        entry.driveMetadataFileId = uploadedMetadata.id;
+        entry.driveMetadataFileId = await getOrCreateDriveFile({ existingId: entry.driveMetadataFileId, entryId: entry.id, kind: 'metadata', name: `${entry.id}.json`, mimeType: 'application/json', data: JSON.stringify(metadata), folderId });
         await saveEntry(entry);
       }
       if (entry.blob && !entry.driveAttachmentFileId) {
-        const uploadedAttachment = await uploadMultipart(`${entry.id}-${entry.fileName || 'attachment'}`, entry.mimeType || 'application/octet-stream', entry.blob, folderId);
-        entry.driveAttachmentFileId = uploadedAttachment.id;
+        entry.driveAttachmentFileId = await getOrCreateDriveFile({ existingId: entry.driveAttachmentFileId, entryId: entry.id, kind: 'attachment', name: `${entry.id}-${entry.fileName || 'attachment'}`, mimeType: entry.mimeType || 'application/octet-stream', data: entry.blob, folderId, checksum: entry.checksum, checksumAlgorithm: entry.checksumAlgorithm });
         await saveEntry(entry);
       }
       entry.syncState = 'synced';
