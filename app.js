@@ -6,6 +6,7 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const typeInfo = { note:['메모','📝'], photo:['사진','📷'], file:['파일','📎'], audio:['녹음','🎙️'], review:['회고','✦'] };
 let mediaRecorder;
 let audioChunks = [];
+const activeObjectUrls = new Set();
 
 function id() { return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`; }
 function now() { return new Date().toISOString(); }
@@ -32,6 +33,8 @@ async function addFiles(files, type) {
 }
 
 async function renderTimeline() {
+  for (const url of activeObjectUrls) URL.revokeObjectURL(url);
+  activeObjectUrls.clear();
   const query=$('#searchInput').value.trim().toLowerCase(); const type=$('#typeFilter').value;
   const entries=(await listEntries()).filter(e => (!type || e.type===type) && (!query || `${e.title} ${e.text} ${(e.tags||[]).join(' ')}`.toLowerCase().includes(query)));
   $('#entryCount').textContent=entries.length; $('#timeline').replaceChildren(); $('#emptyTimeline').hidden=entries.length>0;
@@ -40,6 +43,18 @@ async function renderTimeline() {
     card.querySelector('.entry-icon').textContent=icon; card.querySelector('.entry-meta').textContent=`${label} · ${new Date(entry.createdAt).toLocaleString('ko-KR')}`;
     card.querySelector('h3').textContent=entry.title; card.querySelector('p').textContent=entry.localContentRemoved?'Drive에 보관되어 기기 원본이 정리되었습니다.':(entry.text || entry.fileName || '첨부 기록');
     card.querySelector('.entry-tags').textContent=(entry.tags||[]).map(t=>`#${t}`).join(' '); card.querySelector('.sync-badge').textContent=entry.syncState==='synced'?'Drive ✓':entry.syncState==='error'?'재시도 필요':'대기';
+    if (entry.blob && !entry.localContentRemoved) {
+      const url = URL.createObjectURL(entry.blob);
+      activeObjectUrls.add(url);
+      const link = document.createElement('a');
+      link.className = 'entry-attachment';
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = entry.type === 'photo' ? '사진 보기' : entry.type === 'audio' ? '녹음 재생' : '파일 열기';
+      if (entry.type === 'file') link.download = entry.fileName || entry.title;
+      card.querySelector('.entry-body').append(link);
+    }
     $('#timeline').append(card);
   }
 }
