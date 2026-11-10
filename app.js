@@ -53,8 +53,8 @@ $('#planForm').addEventListener('submit',async event=>{event.preventDefault();aw
 $('#searchInput').addEventListener('input',renderTimeline); $('#typeFilter').addEventListener('change',renderTimeline);
 
 document.querySelectorAll('.bottom-nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.view,.bottom-nav button').forEach(el=>el.classList.remove('active'));$(`#${button.dataset.view}`).classList.add('active');button.classList.add('active');if(button.dataset.view==='timelineView')renderTimeline();if(button.dataset.view==='planView')renderPlans();}));
-$('#settingsButton').addEventListener('click',async()=>{$('#clientIdInput').value=await getSetting('googleClientId');$('#cleanupEnabled').checked=await getSetting('cleanupEnabled',true);$('#settingsDialog').showModal();});
-$('#settingsForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();await saveSetting('googleClientId',$('#clientIdInput').value.trim());await saveSetting('cleanupEnabled',$('#cleanupEnabled').checked);$('#settingsDialog').close();message('설정을 저장했습니다.');});
+$('#settingsButton').addEventListener('click',async()=>{$('#cleanupEnabled').checked=await getSetting('cleanupEnabled',true);$('#settingsDialog').showModal();});
+$('#settingsForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();await saveSetting('cleanupEnabled',$('#cleanupEnabled').checked);$('#settingsDialog').close();message('설정을 저장했습니다.');});
 $('#syncNowButton').addEventListener('click',async()=>{if(!navigator.onLine){message('인터넷에 연결되면 다시 시도하세요.',true);return;}message('Drive 동기화 중…');try{const result=await syncPending();message(`${result.uploaded}개 업로드 · ${result.cloudDeleted}개 1년 보관 만료`);if(await getSetting('cleanupEnabled',true))await cleanupSyncedEntries(30);await renderTimeline();}catch(error){message(error.message,true);}});
 
 window.addEventListener('online',updateNetwork);window.addEventListener('offline',updateNetwork);updateNetwork();renderTimeline();renderPlans();

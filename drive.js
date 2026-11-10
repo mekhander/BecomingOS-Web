@@ -1,4 +1,5 @@
 import { getSetting, listEntries, saveEntry } from './db.js';
+import { GOOGLE_CLIENT_ID } from './config.js';
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 let accessToken = '';
@@ -14,12 +15,10 @@ function waitForGoogle(timeout = 8000) {
 }
 
 export async function connectDrive() {
-  const clientId = await getSetting('googleClientId');
-  if (!clientId) throw new Error('설정에서 Google OAuth Client ID를 먼저 입력하세요.');
   await waitForGoogle();
   accessToken = await new Promise((resolve, reject) => {
     const client = google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
+      client_id: GOOGLE_CLIENT_ID,
       scope: DRIVE_SCOPE,
       callback: response => response.error ? reject(new Error(response.error)) : resolve(response.access_token),
       error_callback: () => reject(new Error('Google 로그인이 취소되었습니다.'))
