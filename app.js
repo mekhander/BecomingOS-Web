@@ -8,16 +8,26 @@ let mediaRecorder;
 let audioChunks = [];
 const activeObjectUrls = new Set();
 let backgroundSyncPromise = null;
+let backgroundSyncRequested = false;
 
 function runBackgroundSync() {
   if (!navigator.onLine) return Promise.resolve();
-  if (backgroundSyncPromise) return backgroundSyncPromise;
+  if (backgroundSyncPromise) {
+    backgroundSyncRequested = true;
+    return backgroundSyncPromise;
+  }
   return backgroundSyncPromise = (async () => {
-    const result = await syncPending({ interactive: false });
-    if (result?.skipped === 'not-connected') return;
-    if (await getSetting('cleanupEnabled', true)) await cleanupSyncedEntries(30);
-    await renderTimeline();
-  })().catch(error => console.warn('Background sync failed:', error)).finally(() => { backgroundSyncPromise = null; });
+    do {
+      backgroundSyncRequested = false;
+      const result = await syncPending({ interactive: false });
+      if (result?.skipped === 'not-connected') return;
+      if (await getSetting('cleanupEnabled', true)) await cleanupSyncedEntries(30);
+      await renderTimeline();
+    } while (backgroundSyncRequested && navigator.onLine);
+  })().catch(error => console.warn('Background sync failed:', error)).finally(() => {
+    backgroundSyncPromise = null;
+    backgroundSyncRequested = false;
+  });
 }
 
 function id() { return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`; }
