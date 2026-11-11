@@ -88,8 +88,12 @@ async function uploadMultipart(name, mimeType, data, folderId, extraMetadata = {
   return driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', { method:'POST', headers:{'Content-Type':`multipart/related; boundary=${boundary}`}, body });
 }
 
-export async function syncPending() {
-  if (!accessToken) await connectDrive();
+export async function syncPending(options = {}) {
+  const interactive = options.interactive !== false;
+  if (!accessToken) {
+    if (!interactive) return { uploaded: 0, total: 0, cloudDeleted: 0, skipped: 'not-connected' };
+    await connectDrive();
+  }
   const folderId = await getFolderId();
   const pending = (await listEntries()).filter(entry => ['pending','error'].includes(entry.syncState) && !entry.localContentRemoved);
   let uploaded = 0;
