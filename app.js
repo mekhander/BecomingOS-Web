@@ -1,5 +1,5 @@
 import { cleanupSyncedEntries, getSetting, listEntries, listPlans, saveEntry, savePlan, saveSetting } from './db.js?v=4';
-import { syncPending } from './drive.js?v=2';
+import { syncPending } from './drive.js?v=3';
 
 const $ = selector => document.querySelector(selector);
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -7,6 +7,18 @@ const typeInfo = { note:['메모','📝'], photo:['사진','📷'], file:['파�
 let mediaRecorder;
 let audioChunks = [];
 const activeObjectUrls = new Set();
+let backgroundSyncPromise = null;
+
+function runBackgroundSync() {
+  if (!navigator.onLine) return Promise.resolve();
+  if (backgroundSyncPromise) return backgroundSyncPromise;
+  return backgroundSyncPromise = (async () => {
+    const result = await syncPending({ interactive: false });
+    if (result?.skipped === 'not-connected') return;
+    if (await getSetting('cleanupEnabled', true)) await cleanupSyncedEntries(30);
+    await renderTimeline();
+  })().catch(error => console.warn('Background sync failed:', error)).finally(() => { backgroundSyncPromise = null; });
+}
 
 function id() { return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`; }
 function now() { return new Date().toISOString(); }
@@ -28,8 +40,8 @@ async function addFiles(files, type) {
     await saveEntry(entryBase(type, { title:file.name, fileName:file.name, mimeType:file.type || 'application/octet-stream', size:file.size, blob:file, checksumAlgorithm:'SHA-256', checksum }));
     saved += 1;
   }
-  if (saved) message(`${saved}개를 이 기기에 저장했습니다.`);
-  await renderTimeline();
+  if (saved) { message(`${saved}개를 이 기기에 저장했습니다.`); await renderTimeline(); void runBackgroundSync(); }
+  else { await renderTimeline(); }
 }
 
 async function renderTimeline() {
@@ -66,12 +78,12 @@ async function renderPlans() {
 
 function updateNetwork() { const online=navigator.onLine; $('#networkDot').classList.toggle('online',online); $('#networkText').textContent=online?'인터넷 연결됨':'오프라인'; $('#syncText').textContent=online?'Drive 동기화를 사용할 수 있습니다':'기기에 안전하게 저장합니다'; }
 
-$('#noteForm').addEventListener('submit',async event=>{event.preventDefault();const text=$('#noteText').value.trim();if(!text)return;await saveEntry(entryBase('note',{title:text.slice(0,42),text,tags:$('#noteTags').value.split(',').map(t=>t.trim()).filter(Boolean)}));event.target.reset();message('메모를 이 기기에 저장했습니다.');await renderTimeline();});
+$('#noteForm').addEventListener('submit',async event=>{event.preventDefault();const text=$('#noteText').value.trim();if(!text)return;await saveEntry(entryBase('note',{title:text.slice(0,42),text,tags:$('#noteTags').value.split(',').map(t=>t.trim()).filter(Boolean)}));event.target.reset();message('메모를 이 기기에 저장했습니다.');await renderTimeline();void runBackgroundSync();});
 $('#photoInput').addEventListener('change',e=>addFiles(e.target.files,'photo'));
 $('#fileInput').addEventListener('change',e=>addFiles(e.target.files,'file'));
-$('#recordButton').addEventListener('click',async()=>{if(mediaRecorder?.state==='recording'){mediaRecorder.stop();return;}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});audioChunks=[];mediaRecorder=new MediaRecorder(stream);mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{const blob=new Blob(audioChunks,{type:mediaRecorder.mimeType});stream.getTracks().forEach(t=>t.stop());const checksum=await sha256Hex(blob);await saveEntry(entryBase('audio',{title:`녹음 ${new Date().toLocaleString('ko-KR')}`,fileName:`recording-${Date.now()}.webm`,mimeType:blob.type,size:blob.size,blob,checksumAlgorithm:'SHA-256',checksum}));$('#recordHint').textContent='눌러서 시작';message('녹음을 이 기기에 저장했습니다.');await renderTimeline();};mediaRecorder.start();$('#recordHint').textContent='녹음 중 · 눌러서 정지';message('녹음 중입니다…');}catch(error){message(location.protocol==='https:'||location.hostname==='localhost'?'마이크 권한을 허용해 주세요.':'녹음은 HTTPS 주소에서 사용할 수 있습니다.',true);}});
+$('#recordButton').addEventListener('click',async()=>{if(mediaRecorder?.state==='recording'){mediaRecorder.stop();return;}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});audioChunks=[];mediaRecorder=new MediaRecorder(stream);mediaRecorder.ondataavailable=e=>audioChunks.push(e.data);mediaRecorder.onstop=async()=>{const blob=new Blob(audioChunks,{type:mediaRecorder.mimeType});stream.getTracks().forEach(t=>t.stop());const checksum=await sha256Hex(blob);await saveEntry(entryBase('audio',{title:`녹음 ${new Date().toLocaleString('ko-KR')}`,fileName:`recording-${Date.now()}.webm`,mimeType:blob.type,size:blob.size,blob,checksumAlgorithm:'SHA-256',checksum}));$('#recordHint').textContent='눌러서 시작';message('녹음을 이 기기에 저장했습니다.');await renderTimeline();void runBackgroundSync();};mediaRecorder.start();$('#recordHint').textContent='녹음 중 · 눌러서 정지';message('녹음 중입니다…');}catch(error){message(location.protocol==='https:'||location.hostname==='localhost'?'마이크 권한을 허용해 주세요.':'녹음은 HTTPS 주소에서 사용할 수 있습니다.',true);}});
 $('#quickReviewButton').addEventListener('click',()=>$('#reviewDialog').showModal());
-$('#reviewForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();const text=$('#reviewText').value.trim();if(!text)return;await saveEntry(entryBase('review',{title:`${new Date().toLocaleDateString('ko-KR')} 회고`,text}));event.target.reset();$('#reviewDialog').close();message('오늘의 회고를 저장했습니다.');await renderTimeline();});
+$('#reviewForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();const text=$('#reviewText').value.trim();if(!text)return;await saveEntry(entryBase('review',{title:`${new Date().toLocaleDateString('ko-KR')} 회고`,text}));event.target.reset();$('#reviewDialog').close();message('오늘의 회고를 저장했습니다.');await renderTimeline();void runBackgroundSync();});
 $('#planForm').addEventListener('submit',async event=>{event.preventDefault();await savePlan({id:id(),text:$('#planText').value.trim(),dueDate:$('#planDate').value,done:false,createdAt:now()});event.target.reset();await renderPlans();});
 $('#searchInput').addEventListener('input',renderTimeline); $('#typeFilter').addEventListener('change',renderTimeline);
 
@@ -80,6 +92,6 @@ $('#settingsButton').addEventListener('click',async()=>{$('#cleanupEnabled').che
 $('#settingsForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();await saveSetting('cleanupEnabled',$('#cleanupEnabled').checked);$('#settingsDialog').close();message('설정을 저장했습니다.');});
 $('#syncNowButton').addEventListener('click',async()=>{if(!navigator.onLine){message('인터넷에 연결되면 다시 시도하세요.',true);return;}message('Drive 동기화 중…');try{const result=await syncPending();message(`${result.uploaded}개 업로드 · ${result.cloudDeleted}개 1년 보관 만료`);if(await getSetting('cleanupEnabled',true))await cleanupSyncedEntries(30);await renderTimeline();}catch(error){message(error.message,true);}});
 
-window.addEventListener('online',updateNetwork);window.addEventListener('offline',updateNetwork);updateNetwork();renderTimeline();renderPlans();
+window.addEventListener('online',()=>{updateNetwork();void runBackgroundSync();});window.addEventListener('offline',updateNetwork);updateNetwork();renderTimeline();renderPlans();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
 if(await getSetting('cleanupEnabled',true))await cleanupSyncedEntries(30);
