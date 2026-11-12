@@ -1,5 +1,5 @@
 import { cleanupSyncedEntries, getSetting, listEntries, listPlans, saveEntry, savePlan, saveSetting } from './db.js?v=4';
-import { syncPending } from './drive.js?v=3';
+import { syncDailyReview, syncPending } from './drive.js?v=4';
 import { getDailyReview } from './daily-review-store.js';
 import { renderDailyReview } from './daily-review-renderer.js';
 import { createDailyReviewUserState } from './daily-review-user-state.js';
@@ -26,6 +26,11 @@ function runBackgroundSync() {
       backgroundSyncRequested = false;
       const result = await syncPending({ interactive: false });
       if (result?.skipped === 'not-connected') return;
+      try {
+        await syncTodayDailyReview({ interactive: false });
+      } catch (error) {
+        console.warn('오늘의 데일리 리뷰 동기화 중 오류가 발생했습니다.');
+      }
       if (await getSetting('cleanupEnabled', true)) await cleanupSyncedEntries(30);
       await renderTimeline();
     } while (backgroundSyncRequested && navigator.onLine);
@@ -43,6 +48,14 @@ function localDateKey(date = new Date()) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+async function syncTodayDailyReview(options = {}) {
+  const res = await syncDailyReview(localDateKey(), options);
+  if (res && res.status === 'imported') {
+    await renderTodayDailyReview();
+  }
+  return res;
 }
 
 async function renderTodayDailyReview() {
@@ -140,7 +153,7 @@ $('#searchInput').addEventListener('input',renderTimeline); $('#typeFilter').add
 document.querySelectorAll('.bottom-nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.view,.bottom-nav button').forEach(el=>el.classList.remove('active'));$(`#${button.dataset.view}`).classList.add('active');button.classList.add('active');if(button.dataset.view==='timelineView'){renderTimeline();void renderTodayDailyReview();}if(button.dataset.view==='planView')renderPlans();}));
 $('#settingsButton').addEventListener('click',async()=>{$('#cleanupEnabled').checked=await getSetting('cleanupEnabled',true);$('#settingsDialog').showModal();});
 $('#settingsForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();await saveSetting('cleanupEnabled',$('#cleanupEnabled').checked);$('#settingsDialog').close();message('설정을 저장했습니다.');});
-$('#syncNowButton').addEventListener('click',async()=>{if(!navigator.onLine){message('인터넷에 연결되면 다시 시도하세요.',true);return;}message('Drive 동기화 중…');try{const result=await syncPending();message(`${result.uploaded}개 업로드 · ${result.cloudDeleted}개 1년 보관 만료`);if(await getSetting('cleanupEnabled',true))await cleanupSyncedEntries(30);await renderTimeline();}catch(error){message(error.message,true);}});
+$('#syncNowButton').addEventListener('click',async()=>{if(!navigator.onLine){message('인터넷에 연결되면 다시 시도하세요.',true);return;}message('Drive 동기화 중…');try{const result=await syncPending();let reviewRes=null;let reviewFailed=false;try{reviewRes=await syncTodayDailyReview({interactive:false});}catch(e){reviewFailed=true;}if(await getSetting('cleanupEnabled',true))await cleanupSyncedEntries(30);await renderTimeline();if(reviewFailed){message('업로드가 완료되었으나 분석을 불러오지 못했습니다.');}else if(reviewRes&&reviewRes.status==='imported'){message(`${result.uploaded}개 업로드 · ${result.cloudDeleted}개 1년 보관 만료, 오늘 분석 업데이트`);}else if(reviewRes&&reviewRes.status==='not_found'){message(`${result.uploaded}개 업로드 · ${result.cloudDeleted}개 1년 보관 만료, 오늘 분석 아직 준비되지 않음`);}else{message(`${result.uploaded}개 업로드 · ${result.cloudDeleted}개 1년 보관 만료`);}}catch(error){message(error.message,true);}});
 
 window.addEventListener('online',()=>{updateNetwork();void runBackgroundSync();});window.addEventListener('offline',updateNetwork);updateNetwork();renderTimeline();renderPlans();void renderTodayDailyReview();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
