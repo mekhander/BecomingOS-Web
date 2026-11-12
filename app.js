@@ -150,6 +150,32 @@ $('#reviewForm').addEventListener('submit',async event=>{if(event.submitter?.val
 $('#planForm').addEventListener('submit',async event=>{event.preventDefault();await savePlan({id:id(),text:$('#planText').value.trim(),dueDate:$('#planDate').value,done:false,createdAt:now()});event.target.reset();await renderPlans();});
 $('#searchInput').addEventListener('input',renderTimeline); $('#typeFilter').addEventListener('change',renderTimeline);
 
+$('#refreshDailyReviewButton').addEventListener('click', async event => {
+  const button = event.currentTarget;
+  const status = $('#dailyReviewStatus');
+  if (!navigator.onLine) {
+    status.textContent = '인터넷 연결 후 다시 시도하세요.';
+    return;
+  }
+  const previousText = button.textContent;
+  button.disabled = true;
+  button.textContent = '불러오는 중…';
+  status.textContent = 'Drive에서 오늘 분석을 확인하고 있습니다…';
+  try {
+    const result = await syncTodayDailyReview({ interactive: true });
+    if (result?.status === 'not_found') {
+      status.textContent = 'Drive에 오늘 분석이 아직 없습니다.';
+    } else if (result?.status === 'skipped') {
+      status.textContent = 'Google Drive 연결이 필요합니다.';
+    }
+  } catch {
+    status.textContent = '오늘 분석을 불러오지 못했습니다. 잠시 후 다시 시도하세요.';
+  } finally {
+    button.disabled = false;
+    button.textContent = previousText;
+  }
+});
+
 document.querySelectorAll('.bottom-nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.view,.bottom-nav button').forEach(el=>el.classList.remove('active'));$(`#${button.dataset.view}`).classList.add('active');button.classList.add('active');if(button.dataset.view==='timelineView'){renderTimeline();void renderTodayDailyReview();}if(button.dataset.view==='planView')renderPlans();}));
 $('#settingsButton').addEventListener('click',async()=>{$('#cleanupEnabled').checked=await getSetting('cleanupEnabled',true);$('#settingsDialog').showModal();});
 $('#settingsForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();await saveSetting('cleanupEnabled',$('#cleanupEnabled').checked);$('#settingsDialog').close();message('설정을 저장했습니다.');});
