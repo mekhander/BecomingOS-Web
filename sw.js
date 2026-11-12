@@ -1,5 +1,5 @@
-const CACHE='becoming-os-v7';
-const ASSETS=['./','./index.html','./styles.css','./daily-review.css','./app.js','./daily-review.js','./daily-review-presenter.js','./daily-review-renderer.js','./daily-review-store.js','./daily-review-user-state.js','./db.js','./drive.js','./config.js','./manifest.webmanifest','./icon.svg'];
+const CACHE='becoming-os-v8';
+const ASSETS=['./','./index.html','./styles.css','./daily-review.css','./app.js','./daily-review.js','./daily-review-presenter.js','./daily-review-renderer.js','./daily-review-store.js','./daily-review-user-state.js','./daily-review-user-store.js','./db.js','./drive.js','./config.js','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET'||new URL(event.request.url).origin!==location.origin)return;event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response;}).catch(()=>caches.match(event.request).then(response=>response||caches.match('./index.html'))));});
