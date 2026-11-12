@@ -1,5 +1,6 @@
 import { getSetting, listEntries, saveEntry } from './db.js?v=4';
 import { GOOGLE_CLIENT_ID } from './config.js?v=2';
+import { importDailyReviewFromDrive } from './daily-review-drive-import.js';
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 let accessToken = '';
@@ -59,6 +60,58 @@ async function getFolderId() {
   const folder = await driveFetch('https://www.googleapis.com/drive/v3/files?fields=id,name', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(metadata) });
   await saveSetting('driveFolderId', folder.id);
   return folder.id;
+}
+
+export async function syncDailyReview(reviewDate, options = {}) {
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    throw new TypeError('daily_review_sync_options_invalid');
+  }
+  const proto = Object.getPrototypeOf(options);
+  if (proto !== null && proto !== Object.prototype) {
+    throw new TypeError('daily_review_sync_options_invalid');
+  }
+  const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+  const allowedKeys = ['interactive', 'fetchImpl', 'saveReview', 'dryRun'];
+  for (const key of Object.keys(options)) {
+    if (!allowedKeys.includes(key)) {
+      throw new TypeError('daily_review_sync_options_invalid');
+    }
+  }
+  let interactive = true;
+  if (hasOwn(options, 'interactive')) {
+    if (typeof options.interactive !== 'boolean') {
+      throw new TypeError('daily_review_sync_options_invalid');
+    }
+    interactive = options.interactive;
+  }
+  let dryRun = false;
+  if (hasOwn(options, 'dryRun')) {
+    if (typeof options.dryRun !== 'boolean') {
+      throw new TypeError('daily_review_sync_options_invalid');
+    }
+    dryRun = options.dryRun;
+  }
+  if (hasOwn(options, 'fetchImpl') && typeof options.fetchImpl !== 'function') {
+    throw new TypeError('daily_review_sync_options_invalid');
+  }
+  if (hasOwn(options, 'saveReview') && typeof options.saveReview !== 'function') {
+    throw new TypeError('daily_review_sync_options_invalid');
+  }
+  if (!accessToken) {
+    if (!interactive) {
+      return { status: 'skipped', reason: 'not-connected', reviewDate };
+    }
+    await connectDrive();
+  }
+  const folderId = await getFolderId();
+  const importerOptions = { accessToken, folderId, dryRun };
+  if (hasOwn(options, 'fetchImpl')) {
+    importerOptions.fetchImpl = options.fetchImpl;
+  }
+  if (hasOwn(options, 'saveReview')) {
+    importerOptions.saveReview = options.saveReview;
+  }
+  return importDailyReviewFromDrive(reviewDate, importerOptions);
 }
 
 async function findExistingFileId(entryId, kind) {
