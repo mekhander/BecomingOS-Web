@@ -96,3 +96,108 @@
 @media (min-width: 700px) {
   .daily-review-summary { grid-template-columns: repeat(4, 1fr); }
 }
+
+.daily-review-user-section {
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+}
+
+.daily-review-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.daily-review-user-confirmation {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.daily-review-decision,
+.daily-review-correction,
+.daily-review-reflection,
+.daily-review-priority {
+  box-sizing: border-box;
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  resize: vertical;
+}
+
+.daily-review-user-status {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.daily-review-save {
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 16px;
+  background: var(--sage);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.daily-review-save:disabled,
+.daily-review-save[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.daily-review-user-section legend {
+  font-weight: 600;
+  color: var(--ink);
+  padding: 0 4px;
+}
+
+.daily-review-user-section label,
+.daily-review-user-form label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+.daily-review-user-section [hidden] {
+  display: none !important;
+}
+
+.daily-review-decision:focus-visible,
+.daily-review-correction:focus-visible,
+.daily-review-reflection:focus-visible,
+.daily-review-priority:focus-visible,
+.daily-review-save:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (min-width: 700px) {
+  .daily-review-user-form {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .daily-review-user-confirmation,
+  .daily-review-user-status,
+  .daily-review-save {
+    grid-column: 1 / -1;
+  }
+}
