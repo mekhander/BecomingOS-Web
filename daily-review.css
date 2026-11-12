@@ -8,7 +8,13 @@
   box-shadow: var(--shadow);
 }
 
-.daily-review-panel-heading { margin-bottom: 1rem; }
+.daily-review-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 1rem;
+}
 .daily-review-panel-heading .eyebrow {
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -17,6 +23,27 @@
   margin-bottom: 0.25rem;
 }
 .daily-review-panel-heading h3 { font-size: 1.25rem; color: var(--ink); margin: 0; }
+.daily-review-refresh {
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 14px;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+}
+.daily-review-refresh:disabled,
+.daily-review-refresh[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.daily-review-refresh:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
 .daily-review-status { font-size: 0.95rem; color: var(--muted); margin-bottom: 1rem; }
 .daily-review-content { display: flex; flex-direction: column; gap: 1.25rem; }
 .daily-review-card {
@@ -95,6 +122,11 @@
 
 @media (min-width: 700px) {
   .daily-review-summary { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 520px) {
+  .daily-review-panel-heading { flex-wrap: wrap; }
+  .daily-review-refresh { width: 100%; }
 }
 
 .daily-review-user-section {
