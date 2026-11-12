@@ -1,0 +1,98 @@
+.daily-review-panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--sage);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.daily-review-panel-heading { margin-bottom: 1rem; }
+.daily-review-panel-heading .eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.daily-review-panel-heading h3 { font-size: 1.25rem; color: var(--ink); margin: 0; }
+.daily-review-status { font-size: 0.95rem; color: var(--muted); margin-bottom: 1rem; }
+.daily-review-content { display: flex; flex-direction: column; gap: 1.25rem; }
+.daily-review-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem;
+}
+.daily-review-header { font-weight: 600; color: var(--ink); margin-bottom: 0.5rem; }
+.daily-review-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.daily-review-facts h4,
+.daily-review-confirmations h4,
+.daily-review-groups h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+}
+.daily-review-facts > ul,
+.daily-review-confirmations > ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.daily-review-facts li,
+.daily-review-confirmations li {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+.daily-review-facts li[data-status="pending"],
+.daily-review-confirmations li[data-status="pending"] { border-left-color: var(--gold); }
+.daily-review-facts li[data-status="confirmed"],
+.daily-review-confirmations li[data-status="confirmed"] { border-left-color: var(--green); }
+.daily-review-facts li span,
+.daily-review-confirmations li span { display: block; }
+.daily-review-facts li span:nth-child(2),
+.daily-review-confirmations li span:nth-child(2) {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+.daily-review-groups > ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.daily-review-groups li {
+  background: var(--line);
+  color: var(--ink);
+  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 16px;
+}
+.daily-review-empty {
+  color: var(--muted);
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+}
+
+@media (min-width: 700px) {
+  .daily-review-summary { grid-template-columns: repeat(4, 1fr); }
+}
