@@ -138,3 +138,57 @@ export function normalizeDailyReviewUserState(value) {
     updatedAt: value.updatedAt
   };
 }
+
+export function updateDailyReviewUserState(rawCurrent, rawChanges, nowIso) {
+  const current = normalizeDailyReviewUserState(rawCurrent);
+  if (!isPlain(rawChanges) || !hasKeys(rawChanges, ['confirmations', 'reflection', 'todayPriority'])) fail();
+  if (!Array.isArray(rawChanges.confirmations) || typeof rawChanges.reflection !== 'string' || typeof rawChanges.todayPriority !== 'string') fail();
+  if (!isValidIso(nowIso)) fail();
+
+  const nowTime = Date.parse(nowIso);
+  if (nowTime < Date.parse(current.createdAt) || nowTime < Date.parse(current.updatedAt)) fail();
+
+  const currentMap = new Map();
+  for (const confirmation of current.confirmations) {
+    if (currentMap.has(confirmation.recordId)) fail();
+    currentMap.set(confirmation.recordId, confirmation);
+  }
+  if (rawChanges.confirmations.length !== current.confirmations.length) fail();
+
+  const changedByRecordId = new Map();
+  const validDecisions = new Set(['pending', 'confirmed', 'corrected', 'rejected']);
+  for (const item of rawChanges.confirmations) {
+    if (!isPlain(item) || !hasKeys(item, ['recordId', 'decision', 'correction'])) fail();
+    if (typeof item.recordId !== 'string' || changedByRecordId.has(item.recordId) || !currentMap.has(item.recordId)) fail();
+    if (typeof item.decision !== 'string' || !validDecisions.has(item.decision)) fail();
+    if (typeof item.correction !== 'string') fail();
+    if (item.decision === 'corrected') {
+      if (item.correction.trim() === '') fail();
+    } else if (item.correction !== '') {
+      fail();
+    }
+    changedByRecordId.set(item.recordId, item);
+  }
+
+  const confirmations = current.confirmations.map(confirmation => {
+    const change = changedByRecordId.get(confirmation.recordId);
+    if (!change) fail();
+    return {
+      recordId: confirmation.recordId,
+      text: confirmation.text,
+      decision: change.decision,
+      correction: change.correction
+    };
+  });
+
+  return normalizeDailyReviewUserState({
+    schemaVersion: current.schemaVersion,
+    reviewDate: current.reviewDate,
+    sourceReview: current.sourceReview,
+    confirmations,
+    reflection: rawChanges.reflection,
+    todayPriority: rawChanges.todayPriority,
+    createdAt: current.createdAt,
+    updatedAt: nowIso
+  });
+}
