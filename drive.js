@@ -45,7 +45,7 @@ async function driveFetch(url, options = {}) {
   throw lastError;
 }
 
-async function getFolderId() {
+async function getExistingFolderId() {
   const saved = await getSetting('driveFolderId');
   if (saved) return saved;
   const { saveSetting } = await import('./db.js');
@@ -56,6 +56,13 @@ async function getFolderId() {
     await saveSetting('driveFolderId', existing.files[0].id);
     return existing.files[0].id;
   }
+  return null;
+}
+
+async function getFolderId() {
+  const existingFolderId = await getExistingFolderId();
+  if (existingFolderId) return existingFolderId;
+  const { saveSetting } = await import('./db.js');
   const metadata = { name: 'BecomingOS', mimeType: 'application/vnd.google-apps.folder', appProperties: { app: 'BecomingOS' } };
   const folder = await driveFetch('https://www.googleapis.com/drive/v3/files?fields=id,name', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(metadata) });
   await saveSetting('driveFolderId', folder.id);
@@ -103,7 +110,8 @@ export async function syncDailyReview(reviewDate, options = {}) {
     }
     await connectDrive();
   }
-  const folderId = await getFolderId();
+  const folderId = await getExistingFolderId();
+  if (!folderId) return { status: 'not_found', reviewDate };
   const importerOptions = { accessToken, folderId, dryRun };
   if (hasOwn(options, 'fetchImpl')) {
     importerOptions.fetchImpl = options.fetchImpl;
