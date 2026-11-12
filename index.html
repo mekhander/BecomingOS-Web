@@ -61,8 +61,11 @@
       <div class="section-heading"><div><p class="eyebrow">REVIEW</p><h2 id="timelineHeading">기록 타임라인</h2></div><span id="entryCount" class="count">0</span></div>
       <section id="dailyReviewPanel" class="daily-review-panel" aria-labelledby="dailyReviewHeading">
         <header class="daily-review-panel-heading">
-          <p class="eyebrow">DAILY REVIEW</p>
-          <h3 id="dailyReviewHeading">오늘의 분석</h3>
+          <div>
+            <p class="eyebrow">DAILY REVIEW</p>
+            <h3 id="dailyReviewHeading">오늘의 분석</h3>
+          </div>
+          <button id="refreshDailyReviewButton" class="daily-review-refresh" type="button" aria-describedby="dailyReviewStatus">분석 새로고침</button>
         </header>
         <p id="dailyReviewStatus" class="daily-review-status" role="status" aria-live="polite">분석 결과를 불러오지 않았습니다.</p>
         <div id="dailyReviewContent" class="daily-review-content"></div>
@@ -110,7 +113,7 @@
       <p class="eyebrow">SETTINGS</p><h2>보관과 동기화</h2>
       <p class="help"><strong>Google Drive 연결 준비됨</strong><br>동기화를 누르면 Google 로그인이 열립니다. BecomingOS가 만든 전용 폴더와 파일에만 접근합니다.</p>
       <label class="check-row"><input id="cleanupEnabled" type="checkbox" checked> Drive 업로드 확인 후 30일 지난 기기 원본 자동 정리</label>
-      <p class="help">Google Drive 원본은 1년간 보관한 뒤 다음 동기화 때 삭제합니다. 기록 ID와 보관 시각은 기기에 남습니다.</p>
+      <p class="help">Google Drive 원본은 현재 자동 삭제하지 않습니다. 복구·감사 안전장치를 갖춘 뒤 보관 정책을 다시 적용합니다.</p>
       <button class="primary wide" value="default">설정 저장</button>
     </form>
   </dialog>
