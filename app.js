@@ -1,5 +1,7 @@
 import { cleanupSyncedEntries, getSetting, listEntries, listPlans, saveEntry, savePlan, saveSetting } from './db.js?v=4';
 import { syncPending } from './drive.js?v=3';
+import { getDailyReview } from './daily-review-store.js';
+import { renderDailyReview } from './daily-review-renderer.js';
 
 const $ = selector => document.querySelector(selector);
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -32,6 +34,33 @@ function runBackgroundSync() {
 
 function id() { return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`; }
 function now() { return new Date().toISOString(); }
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function renderTodayDailyReview() {
+  const content = document.getElementById('dailyReviewContent');
+  const status = document.getElementById('dailyReviewStatus');
+  if (!content || !status) return;
+  try {
+    const review = await getDailyReview(localDateKey());
+    if (!review) {
+      content.replaceChildren();
+      status.textContent = '오늘 분석 결과가 아직 없습니다.';
+      return;
+    }
+    renderDailyReview(content, review);
+    status.textContent = `${review.sourceCount}개의 기록을 분석했습니다.`;
+  } catch {
+    content.replaceChildren();
+    status.textContent = '분석 결과를 표시할 수 없습니다.';
+  }
+}
+
 function message(text, error = false) { const el=$('#captureMessage'); el.textContent=text; el.style.color=error?'#a43f38':''; }
 function entryBase(type, fields = {}) { const createdAt=now(); return { id:id(), type, title:typeInfo[type][0], text:'', tags:[], createdAt, capturedAt:createdAt, syncState:'pending', processingState:'unprocessed', ...fields }; }
 
@@ -97,11 +126,11 @@ $('#reviewForm').addEventListener('submit',async event=>{if(event.submitter?.val
 $('#planForm').addEventListener('submit',async event=>{event.preventDefault();await savePlan({id:id(),text:$('#planText').value.trim(),dueDate:$('#planDate').value,done:false,createdAt:now()});event.target.reset();await renderPlans();});
 $('#searchInput').addEventListener('input',renderTimeline); $('#typeFilter').addEventListener('change',renderTimeline);
 
-document.querySelectorAll('.bottom-nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.view,.bottom-nav button').forEach(el=>el.classList.remove('active'));$(`#${button.dataset.view}`).classList.add('active');button.classList.add('active');if(button.dataset.view==='timelineView')renderTimeline();if(button.dataset.view==='planView')renderPlans();}));
+document.querySelectorAll('.bottom-nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.view,.bottom-nav button').forEach(el=>el.classList.remove('active'));$(`#${button.dataset.view}`).classList.add('active');button.classList.add('active');if(button.dataset.view==='timelineView'){renderTimeline();void renderTodayDailyReview();}if(button.dataset.view==='planView')renderPlans();}));
 $('#settingsButton').addEventListener('click',async()=>{$('#cleanupEnabled').checked=await getSetting('cleanupEnabled',true);$('#settingsDialog').showModal();});
 $('#settingsForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();await saveSetting('cleanupEnabled',$('#cleanupEnabled').checked);$('#settingsDialog').close();message('설정을 저장했습니다.');});
 $('#syncNowButton').addEventListener('click',async()=>{if(!navigator.onLine){message('인터넷에 연결되면 다시 시도하세요.',true);return;}message('Drive 동기화 중…');try{const result=await syncPending();message(`${result.uploaded}개 업로드 · ${result.cloudDeleted}개 1년 보관 만료`);if(await getSetting('cleanupEnabled',true))await cleanupSyncedEntries(30);await renderTimeline();}catch(error){message(error.message,true);}});
 
-window.addEventListener('online',()=>{updateNetwork();void runBackgroundSync();});window.addEventListener('offline',updateNetwork);updateNetwork();renderTimeline();renderPlans();
+window.addEventListener('online',()=>{updateNetwork();void runBackgroundSync();});window.addEventListener('offline',updateNetwork);updateNetwork();renderTimeline();renderPlans();void renderTodayDailyReview();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
 if(await getSetting('cleanupEnabled',true))await cleanupSyncedEntries(30);
