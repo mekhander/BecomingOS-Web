@@ -171,8 +171,7 @@ export async function syncPending(options = {}) {
       await saveEntry(entry);
     }
   }
-  const cloudDeleted = await cleanupRemoteExpired(365);
-  return { uploaded, total: pending.length, cloudDeleted };
+  return { uploaded, total: pending.length, cloudDeleted: 0 };
 }
 
 async function deleteDriveFile(fileId) {
