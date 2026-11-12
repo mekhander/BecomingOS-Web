@@ -2,6 +2,9 @@ import { cleanupSyncedEntries, getSetting, listEntries, listPlans, saveEntry, sa
 import { syncPending } from './drive.js?v=3';
 import { getDailyReview } from './daily-review-store.js';
 import { renderDailyReview } from './daily-review-renderer.js';
+import { createDailyReviewUserState } from './daily-review-user-state.js';
+import { getDailyReviewUserState, saveDailyReviewUserState } from './daily-review-user-store.js';
+import { renderDailyReviewUserForm } from './daily-review-user-form.js';
 
 const $ = selector => document.querySelector(selector);
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
@@ -54,6 +57,14 @@ async function renderTodayDailyReview() {
       return;
     }
     renderDailyReview(content, review);
+    const existingUserState = await getDailyReviewUserState(review.reviewDate);
+    const userState = existingUserState ?? createDailyReviewUserState(review, new Date().toISOString());
+    const userSection = content.ownerDocument.createElement('section');
+    userSection.className = 'daily-review-user-section';
+    content.appendChild(userSection);
+    renderDailyReviewUserForm(userSection, userState, {
+      onSave: state => saveDailyReviewUserState(state),
+    });
     status.textContent = `${review.sourceCount}개의 기록을 분석했습니다.`;
   } catch {
     content.replaceChildren();
