@@ -1,0 +1,25 @@
+.today-priority-panel {
+  background: var(--card);
+  border: 1px solid rgba(18, 55, 42, 0.08);
+  border-left: 4px solid var(--gold);
+  border-radius: 22px;
+  padding: 18px 20px;
+  margin: 0 0 24px;
+  box-shadow: var(--shadow);
+}
+
+.today-priority-panel h2 {
+  margin: 0 0 10px;
+  font-size: 1.4rem;
+}
+
+.today-priority-text {
+  margin: 0;
+  color: var(--ink);
+  font-family: Georgia, "Noto Serif KR", serif;
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
