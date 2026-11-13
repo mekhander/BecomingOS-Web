@@ -50,6 +50,18 @@ function localDateKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+async function renderTodayPriority() {
+  const priorityText = document.getElementById('todayPriorityText');
+  if (!priorityText) return;
+  try {
+    const state = await getDailyReviewUserState(localDateKey());
+    const value = state?.todayPriority?.trim();
+    priorityText.textContent = value || '오늘의 분석과 성찰에서 정할 수 있습니다.';
+  } catch {
+    priorityText.textContent = '오늘의 우선순위를 표시할 수 없습니다.';
+  }
+}
+
 async function syncTodayDailyReview(options = {}) {
   const res = await syncDailyReview(localDateKey(), options);
   if (res && res.status === 'imported') {
@@ -76,7 +88,11 @@ async function renderTodayDailyReview() {
     userSection.className = 'daily-review-user-section';
     content.appendChild(userSection);
     renderDailyReviewUserForm(userSection, userState, {
-      onSave: state => saveDailyReviewUserState(state),
+      onSave: async state => {
+        const saved = await saveDailyReviewUserState(state);
+        await renderTodayPriority();
+        return saved;
+      },
     });
     status.textContent = `${review.sourceCount}개의 기록을 분석했습니다.`;
   } catch {
@@ -176,11 +192,11 @@ $('#refreshDailyReviewButton').addEventListener('click', async event => {
   }
 });
 
-document.querySelectorAll('.bottom-nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.view,.bottom-nav button').forEach(el=>el.classList.remove('active'));$(`#${button.dataset.view}`).classList.add('active');button.classList.add('active');if(button.dataset.view==='timelineView'){renderTimeline();void renderTodayDailyReview();}if(button.dataset.view==='planView')renderPlans();}));
+document.querySelectorAll('.bottom-nav button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.view,.bottom-nav button').forEach(el=>el.classList.remove('active'));$(`#${button.dataset.view}`).classList.add('active');button.classList.add('active');if(button.dataset.view==='captureView')void renderTodayPriority();if(button.dataset.view==='timelineView'){renderTimeline();void renderTodayDailyReview();}if(button.dataset.view==='planView')renderPlans();}));
 $('#settingsButton').addEventListener('click',async()=>{$('#cleanupEnabled').checked=await getSetting('cleanupEnabled',true);$('#settingsDialog').showModal();});
 $('#settingsForm').addEventListener('submit',async event=>{if(event.submitter?.value==='cancel')return;event.preventDefault();await saveSetting('cleanupEnabled',$('#cleanupEnabled').checked);$('#settingsDialog').close();message('설정을 저장했습니다.');});
 $('#syncNowButton').addEventListener('click',async()=>{if(!navigator.onLine){message('인터넷에 연결되면 다시 시도하세요.',true);return;}message('Drive 동기화 중…');try{const result=await syncPending();let reviewRes=null;let reviewFailed=false;try{reviewRes=await syncTodayDailyReview({interactive:false});}catch(e){reviewFailed=true;}if(await getSetting('cleanupEnabled',true))await cleanupSyncedEntries(30);await renderTimeline();if(reviewFailed){message('업로드가 완료되었으나 분석을 불러오지 못했습니다.');}else if(reviewRes&&reviewRes.status==='imported'){message(`${result.uploaded}개 업로드 · 오늘 분석 업데이트`);}else if(reviewRes&&reviewRes.status==='not_found'){message(`${result.uploaded}개 업로드 · 오늘 분석 아직 준비되지 않음`);}else{message(`${result.uploaded}개 업로드`);}}catch(error){message(error.message,true);}});
 
-window.addEventListener('online',()=>{updateNetwork();void runBackgroundSync();});window.addEventListener('offline',updateNetwork);updateNetwork();renderTimeline();renderPlans();void renderTodayDailyReview();
+window.addEventListener('online',()=>{updateNetwork();void runBackgroundSync();});window.addEventListener('offline',updateNetwork);updateNetwork();renderTimeline();renderPlans();void renderTodayPriority();void renderTodayDailyReview();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js');
 if(await getSetting('cleanupEnabled',true))await cleanupSyncedEntries(30);
